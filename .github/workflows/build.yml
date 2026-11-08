@@ -1,3 +1,4 @@
+
 name: Build CreativeSquad4
 
 on:
@@ -20,14 +21,27 @@ jobs:
         with:
           gradle-version: '9.2.1'
 
-      - name: Extract project
+      - name: Find and extract project
         run: |
-          unzip -o CreativeSquad4Paper-mobile-build.zip -d source
-
-      - name: Build plugin
-        run: gradle -p source/CreativeSquad4Paper build
+          ZIP=$(find . -maxdepth 2 -name '*.zip' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "ZIP do projeto nao encontrado"
+            exit 1
+          fi
+          mkdir -p source
+          unzip -o "$ZIP" -d source
+          BUILD=$(find source -name build.gradle.kts -print -quit)
+          if [ -z "$BUILD" ]; then
+            echo "build.gradle.kts nao encontrado"
+            find source -maxdepth 4 -type f
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$BUILD")
+          echo "Projeto encontrado em: $PROJECT_DIR"
+          gradle -p "$PROJECT_DIR" build
 
       - uses: actions/upload-artifact@v4
         with:
           name: CreativeSquad4Paper-JAR
-          path: source/CreativeSquad4Paper/build/libs/*.jar
+          path: source/**/build/libs/*.jar
+          if-no-files-found: error
